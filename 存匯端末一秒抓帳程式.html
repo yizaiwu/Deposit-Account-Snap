@@ -1,0 +1,810 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>存匯端末一秒抓帳程式</title>
+  <style>
+    :root {
+      --bg: #f5f7f8;
+      --panel: #ffffff;
+      --line: #d9e0e4;
+      --text: #172026;
+      --muted: #5f6f7a;
+      --accent: #0f6b63;
+      --accent-soft: #e6f3f1;
+      --danger: #b42318;
+      --danger-soft: #fdecec;
+      --ok: #137333;
+      --ok-soft: #e8f4ec;
+      --warning: #a15c07;
+      --warning-soft: #fff4df;
+      --shadow: 0 14px 34px rgba(23, 32, 38, 0.08);
+    }
+
+    body.theme-dark {
+      --bg: #111816;
+      --panel: #18221f;
+      --line: #2f403b;
+      --text: #eef6f2;
+      --muted: #a7b9b2;
+      --accent: #7fd8c8;
+      --accent-soft: #203832;
+      --danger: #ffb4ab;
+      --danger-soft: #3b201d;
+      --ok: #95d6a4;
+      --ok-soft: #203629;
+      --warning: #f3c77b;
+      --warning-soft: #3a2d18;
+      --shadow: 0 14px 34px rgba(0, 0, 0, 0.28);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Microsoft JhengHei", "PingFang TC", "Noto Sans TC", Arial, sans-serif;
+      font-size: 16px;
+      line-height: 1.5;
+    }
+
+    .app {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 36px;
+    }
+
+    header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(24px, 3vw, 34px);
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .theme-toggle {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-width: 138px;
+      color: var(--text);
+      background: var(--panel);
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .upload-panel {
+      padding: 18px;
+      margin-bottom: 18px;
+    }
+
+    .upload-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .file-label {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 48px;
+      padding: 10px 12px;
+      border: 1px dashed #9cb0b8;
+      border-radius: 8px;
+      background: var(--panel);
+      cursor: pointer;
+    }
+
+    .file-label:focus-within {
+      outline: 3px solid rgba(15, 107, 99, 0.18);
+      border-color: var(--accent);
+    }
+
+    .file-label input {
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      position: absolute;
+      pointer-events: none;
+    }
+
+    .file-icon {
+      display: inline-grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      flex: 0 0 auto;
+    }
+
+    .file-text {
+      min-width: 0;
+    }
+
+    .file-name {
+      display: block;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .file-hint {
+      display: block;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    button {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--text);
+      min-height: 42px;
+      padding: 0 14px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button:hover {
+      border-color: #9cb0b8;
+      background: var(--accent-soft);
+    }
+
+    button:disabled {
+      color: #9aa7ad;
+      cursor: not-allowed;
+      background: var(--bg);
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .stat {
+      padding: 14px 16px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .stat span {
+      display: block;
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 24px;
+      line-height: 1.1;
+    }
+
+    .result-panel {
+      overflow: hidden;
+    }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .result-header h2 {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 28px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      background: var(--bg);
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .badge.danger {
+      background: var(--danger-soft);
+      color: var(--danger);
+    }
+
+    .badge.ok {
+      background: var(--ok-soft);
+      color: var(--ok);
+    }
+
+    .message {
+      margin: 18px;
+      padding: 14px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+    }
+
+    .message.error {
+      border-color: #f2b8b5;
+      background: var(--danger-soft);
+      color: var(--danger);
+      font-weight: 700;
+    }
+
+    .message.ok {
+      border-color: #b8d9c3;
+      background: var(--ok-soft);
+      color: var(--ok);
+      font-weight: 700;
+    }
+
+    .message.warning {
+      border-color: #f0cf92;
+      background: var(--warning-soft);
+      color: var(--warning);
+      font-weight: 700;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 760px;
+    }
+
+    th,
+    td {
+      padding: 11px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--line);
+      white-space: nowrap;
+    }
+
+    th {
+      color: var(--muted);
+      font-size: 13px;
+      background: #f9fbfb;
+      font-weight: 700;
+    }
+
+    body.theme-dark th {
+      background: #1d2925;
+    }
+
+    td.amount {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      font-family: Consolas, "Courier New", monospace;
+    }
+
+    tr.problem-row td {
+      background: #fffafa;
+    }
+
+    body.theme-dark tr.problem-row td {
+      background: #241b1a;
+    }
+
+    .empty {
+      padding: 28px 18px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .credit {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+    }
+
+    @media (max-width: 760px) {
+      .app {
+        width: min(100% - 20px, 1180px);
+        padding-top: 18px;
+      }
+
+      header,
+      .upload-row,
+      .result-header {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .upload-row {
+        grid-template-columns: 1fr;
+      }
+
+      .stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <div>
+        <h1>存匯端末一秒抓帳程式</h1>
+        <p class="subtitle">上傳 HP0010 CSV，快速檢查 H / SH 交易借貸是否平衡。</p>
+      </div>
+      <button id="themeToggle" class="theme-toggle" type="button" aria-pressed="false">
+        <span id="themeIcon" aria-hidden="true">☾</span>
+        <span id="themeText">黑暗模式</span>
+      </button>
+    </header>
+
+    <section class="panel upload-panel" aria-label="CSV 上傳">
+      <div class="upload-row">
+        <label class="file-label">
+          <input id="csvFile" type="file" accept=".csv,text/csv">
+          <span class="file-icon" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7l-5-5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+              <path d="M14 2v5h5M9 13h6M9 17h6M9 9h1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+          <span class="file-text">
+            <span id="fileName" class="file-name">選擇 CSV 檔案</span>
+            <span class="file-hint">資料只在本機瀏覽器分析，不會上傳。</span>
+          </span>
+        </label>
+        <button id="clearButton" type="button" disabled>清除</button>
+      </div>
+    </section>
+
+    <section class="stats" aria-label="分析統計">
+      <div class="stat">
+        <span>上傳檔名</span>
+        <strong id="statFile">未選擇</strong>
+      </div>
+      <div class="stat">
+        <span>分析筆數</span>
+        <strong id="statTotal">0</strong>
+      </div>
+      <div class="stat">
+        <span>納入分析</span>
+        <strong id="statIncluded">0</strong>
+      </div>
+      <div class="stat">
+        <span>不平筆數</span>
+        <strong id="statProblems">0</strong>
+      </div>
+    </section>
+
+    <section class="panel result-panel" aria-label="分析結果">
+      <div class="result-header">
+        <h2>分析結果</h2>
+        <span id="resultBadge" class="badge">等待上傳</span>
+      </div>
+      <div id="message" class="empty">請選擇 CSV 檔案開始分析。</div>
+      <div id="tableWrap" class="table-wrap" hidden>
+        <table>
+          <thead>
+            <tr>
+              <th>交易時間</th>
+              <th>借方合計</th>
+              <th>貸方金額</th>
+              <th>差額</th>
+              <th>結果</th>
+            </tr>
+          </thead>
+          <tbody id="resultRows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer class="credit">Made with ❤️ by 乙仔 &amp; Codex</footer>
+  </main>
+
+  <script>
+    const REQUIRED_COLUMNS = [
+      '櫃員',
+      '櫃檯機號',
+      '交易時間',
+      '端末交易代號',
+      '交易代號',
+      '交易摘要',
+      '歸戶/歸戶編號/其他',
+      '借貸',
+      '更正記號',
+      '主管',
+      '交易金額',
+      '訊息代號'
+    ];
+
+    const fileInput = document.getElementById('csvFile');
+    const clearButton = document.getElementById('clearButton');
+    const themeToggle = document.getElementById('themeToggle');
+    const themeIcon = document.getElementById('themeIcon');
+    const themeText = document.getElementById('themeText');
+    const fileName = document.getElementById('fileName');
+    const statFile = document.getElementById('statFile');
+    const statTotal = document.getElementById('statTotal');
+    const statIncluded = document.getElementById('statIncluded');
+    const statProblems = document.getElementById('statProblems');
+    const resultBadge = document.getElementById('resultBadge');
+    const message = document.getElementById('message');
+    const tableWrap = document.getElementById('tableWrap');
+    const resultRows = document.getElementById('resultRows');
+
+    fileInput.addEventListener('change', handleFileChange);
+    clearButton.addEventListener('click', resetView);
+    themeToggle.addEventListener('click', toggleTheme);
+    initTheme();
+
+    function handleFileChange(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) {
+        resetView();
+        return;
+      }
+
+      fileName.textContent = file.name;
+      statFile.textContent = file.name;
+      clearButton.disabled = false;
+      setPending('讀取檔案中...');
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const report = analyzeCsv(String(reader.result || ''));
+          renderReport(report);
+        } catch (error) {
+          renderError(error.message || 'CSV 解析失敗。');
+        }
+      };
+      reader.onerror = () => renderError('檔案讀取失敗，請重新選擇 CSV。');
+      reader.readAsText(file, 'utf-8');
+    }
+
+    function analyzeCsv(csvText) {
+      const table = parseCsv(csvText);
+      if (table.length < 2) {
+        throw new Error('CSV 沒有可分析的資料列。');
+      }
+
+      const headers = table[0].map(normalizeHeader);
+      const missing = REQUIRED_COLUMNS.filter((column) => !headers.includes(column));
+      if (missing.length > 0) {
+        throw new Error(`CSV 缺少必要欄位：${missing.join('、')}`);
+      }
+
+      const rows = table.slice(1)
+        .filter((cells) => cells.some((cell) => String(cell).trim() !== ''))
+        .map((cells) => rowToObject(headers, cells));
+
+      const included = [];
+      for (const row of rows) {
+        const summary = normalizeValue(row['交易摘要']);
+        const amount = parseAmount(row['交易金額']);
+        const side = normalizeValue(row['借貸']);
+        if ((summary === 'H' || summary === 'SH') && amount !== null && (side === '0' || side === '1')) {
+          included.push({
+            time: normalizeValue(row['交易時間']),
+            summary,
+            side,
+            amount
+          });
+        }
+      }
+
+      const comparisons = compareDebitCredit(included);
+      const problems = comparisons.filter((item) => item.difference !== 0);
+
+      return {
+        totalRows: rows.length,
+        includedRows: included.length,
+        comparisons,
+        problems
+      };
+    }
+
+    function parseCsv(text) {
+      const rows = [];
+      let row = [];
+      let cell = '';
+      let inQuotes = false;
+
+      for (let i = 0; i < text.length; i += 1) {
+        const char = text[i];
+        const next = text[i + 1];
+
+        if (char === '"') {
+          if (inQuotes && next === '"') {
+            cell += '"';
+            i += 1;
+          } else {
+            inQuotes = !inQuotes;
+          }
+          continue;
+        }
+
+        if (char === ',' && !inQuotes) {
+          row.push(cell);
+          cell = '';
+          continue;
+        }
+
+        if ((char === '\n' || char === '\r') && !inQuotes) {
+          if (char === '\r' && next === '\n') {
+            i += 1;
+          }
+          row.push(cell);
+          rows.push(row);
+          row = [];
+          cell = '';
+          continue;
+        }
+
+        cell += char;
+      }
+
+      if (cell !== '' || row.length > 0) {
+        row.push(cell);
+        rows.push(row);
+      }
+
+      return rows;
+    }
+
+    function rowToObject(headers, cells) {
+      const row = {};
+      headers.forEach((header, index) => {
+        row[header] = cells[index] || '';
+      });
+      return row;
+    }
+
+    function compareDebitCredit(rows) {
+      const comparisons = [];
+      let debitTotal = 0;
+      let debitCount = 0;
+      let debitStartTime = '';
+
+      for (const row of rows) {
+        if (row.side === '0') {
+          if (debitCount === 0) {
+            debitStartTime = row.time;
+          }
+          debitTotal += row.amount;
+          debitCount += 1;
+          continue;
+        }
+
+        if (row.side === '1') {
+          const difference = Math.abs(debitTotal - row.amount);
+          comparisons.push({
+            time: row.time || debitStartTime || '-',
+            debitTotal,
+            creditAmount: row.amount,
+            difference,
+            result: buildResultText(debitTotal, row.amount, difference),
+            status: difference === 0 ? 'balanced' : 'problem'
+          });
+          debitTotal = 0;
+          debitCount = 0;
+          debitStartTime = '';
+        }
+      }
+
+      if (debitCount > 0) {
+        comparisons.push({
+          time: debitStartTime || '-',
+          debitTotal,
+          creditAmount: 0,
+          difference: debitTotal,
+          result: `借貸不平，金額${formatNumber(debitTotal)}元，借方多`,
+          status: 'problem'
+        });
+      }
+
+      return comparisons;
+    }
+
+    function buildResultText(debitTotal, creditAmount, difference) {
+      if (difference === 0) {
+        return '借貸平衡';
+      }
+      const side = debitTotal > creditAmount ? '借方多' : '貸方多';
+      return `借貸不平，金額${formatNumber(difference)}元，${side}`;
+    }
+
+    function parseAmount(value) {
+      const normalized = normalizeValue(value).replace(/,/g, '');
+      if (normalized === '') {
+        return null;
+      }
+      if (!/^-?\d+(\.\d+)?$/.test(normalized)) {
+        return null;
+      }
+      return Number(normalized);
+    }
+
+    function normalizeHeader(value) {
+      return String(value || '').replace(/^\uFEFF/, '').trim();
+    }
+
+    function normalizeValue(value) {
+      return String(value || '').trim();
+    }
+
+    function formatNumber(value) {
+      return Number(value).toLocaleString('zh-TW', { maximumFractionDigits: 2 });
+    }
+
+    function renderReport(report) {
+      statTotal.textContent = formatNumber(report.totalRows);
+      statIncluded.textContent = formatNumber(report.includedRows);
+      statProblems.textContent = formatNumber(report.problems.length);
+
+      resultRows.innerHTML = '';
+
+      if (report.comparisons.length === 0) {
+        tableWrap.hidden = true;
+        resultBadge.className = 'badge';
+        resultBadge.textContent = '無可比對資料';
+        setMessage('找不到符合 H / SH 且有交易金額的借貸資料。', 'warning');
+        return;
+      }
+
+      for (const item of report.comparisons) {
+        const tr = document.createElement('tr');
+        if (item.status === 'problem') {
+          tr.className = 'problem-row';
+        }
+        tr.innerHTML = `
+          <td>${escapeHtml(item.time)}</td>
+          <td class="amount">${formatNumber(item.debitTotal)}</td>
+          <td class="amount">${formatNumber(item.creditAmount)}</td>
+          <td class="amount">${formatNumber(item.difference)} 元</td>
+          <td>${escapeHtml(item.result)}</td>
+        `;
+        resultRows.appendChild(tr);
+      }
+
+      tableWrap.hidden = false;
+      if (report.problems.length > 0) {
+        resultBadge.className = 'badge danger';
+        resultBadge.textContent = `不平 ${report.problems.length} 筆`;
+        setMessage(report.problems.map((item) => item.result).join('；'), 'error');
+      } else {
+        resultBadge.className = 'badge ok';
+        resultBadge.textContent = '借貸平衡';
+        setMessage('借貸平衡', 'ok');
+      }
+    }
+
+    function renderError(text) {
+      statTotal.textContent = '0';
+      statIncluded.textContent = '0';
+      statProblems.textContent = '0';
+      resultRows.innerHTML = '';
+      tableWrap.hidden = true;
+      resultBadge.className = 'badge danger';
+      resultBadge.textContent = '解析失敗';
+      setMessage(text, 'error');
+    }
+
+    function setPending(text) {
+      resultRows.innerHTML = '';
+      tableWrap.hidden = true;
+      resultBadge.className = 'badge';
+      resultBadge.textContent = '處理中';
+      setMessage(text, '');
+    }
+
+    function setMessage(text, type) {
+      message.className = type ? `message ${type}` : 'message';
+      message.textContent = text;
+    }
+
+    function resetView() {
+      fileInput.value = '';
+      fileName.textContent = '選擇 CSV 檔案';
+      statFile.textContent = '未選擇';
+      statTotal.textContent = '0';
+      statIncluded.textContent = '0';
+      statProblems.textContent = '0';
+      resultRows.innerHTML = '';
+      tableWrap.hidden = true;
+      clearButton.disabled = true;
+      resultBadge.className = 'badge';
+      resultBadge.textContent = '等待上傳';
+      message.className = 'empty';
+      message.textContent = '請選擇 CSV 檔案開始分析。';
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function initTheme() {
+      const savedTheme = getSavedTheme();
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      applyTheme(savedTheme || (prefersDark ? 'dark' : 'light'));
+    }
+
+    function toggleTheme() {
+      const nextTheme = document.body.classList.contains('theme-dark') ? 'light' : 'dark';
+      saveTheme(nextTheme);
+      applyTheme(nextTheme);
+    }
+
+    function applyTheme(theme) {
+      const isDark = theme === 'dark';
+      document.body.classList.toggle('theme-dark', isDark);
+      themeToggle.setAttribute('aria-pressed', String(isDark));
+      themeIcon.textContent = isDark ? '☀' : '☾';
+      themeText.textContent = isDark ? '明亮模式' : '黑暗模式';
+    }
+
+    function getSavedTheme() {
+      try {
+        return localStorage.getItem('depositSnapTheme');
+      } catch (error) {
+        return null;
+      }
+    }
+
+    function saveTheme(theme) {
+      try {
+        localStorage.setItem('depositSnapTheme', theme);
+      } catch (error) {
+        // Theme switching should keep working even when storage is blocked.
+      }
+    }
+  </script>
+</body>
+</html>
